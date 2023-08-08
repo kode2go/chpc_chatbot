@@ -1,0 +1,262 @@
+CHPC Quick Start Guide
+This guide is intended for experienced HPC users and provides a summary of the essential components of the systems available at the CHPC. For more detailed information on the subjects below see the full User Guide.
+docti cave
+Video tutorials for newcomers
+If you are a new user to the CHPC, please watch these videos:
+	Setting up a cluster password and logging in for the first time
+	The CHPC's service nodes and using the module system
+	Test running in an interactive PBS session
+	Running an application in batch mode under PBS
+Overview: 32 832 cores
+The CHPC's Dell Linux cluster has been up and running since 2014.
+The new system is an homogeneous cluster, comprising Intel 5th generation CPUs. As of March 2017 it has 1368 compute nodes with 24 cores and 128 GiB* memory (360 nodes have only 64 GiB) each, and five large memory “fat” nodes with 56 cores and 1TiB* each, all interconnected using FDR 56 Gb/s InfiniBand accessing 4 PB of shared storage over the Lustre filesystem.
+* Maximum available memory on each type of node: mem=124gb (regular) or mem=61gb (regular with only 64GiB), and mem=1007gb (fat).
+GPU nodes
+There are 9 compute nodes that contain a total of 30 Nvidia V100 GPUs. For more information see the GPU guide.
+Logging in
+To connect to the new systems ssh to lengau.chpc.ac.za and log in using the username and password sent to you by the CHPC:
+ssh username@lengau.chpc.ac.za
+The new system is running CentOS 7.3 and uses the Bash shell by default.
+You should change your password after logging in the first time. To change your password, use the passwd command. Rules are: 10 characters, with at least one of the following character types: upper and lower case, numbers, and special characters. Use ssh keys wherever possible.
+Once you have logged in, give some consideration to how you will be using your session on the login node. If you are going to spend a long time logged in, doing a variety of tasks, it is best to get yourself an interactive PBS session to work in. This way, if you need to do something demanding, it will not conflict with other users logged into the login node.
+Trouble Logging in?
+Many users have their login blocked at some point. Usually this is because an incorrect password was entered more times than permitted (5 times). This restriction was put in place to prevent brute-force attacks by malicious individuals who want to gain access to your account.
+	If you cannot log in, the first step is to make sure that you typed your username, hostname (lengau.chpc.ac.za or scp.chpc.ac.za) and password correctly. It sounds stupid, but this is often the problem. It happens to CHPC staff too…
+	Next, check that you are not experiencing a network problem. If you see a message along the lines of “cannot resolve hostname”, then your network is probably at fault (assuming that your spelling is correct).
+	If your network connection is fine, wait 30 minutes before attempting to log in again. After this period, the block is supposed to be automatically removed.
+	If for some reason this does not work, you should go to your user page on users.chpc.ac.za. There is a link at that address, to the left, which allows you to change your password and also edit other details for your entry on our user database (email addresses, qualifications, institution, etc.) Be sure that your password conforms to all requirements
+	If even changing the password does not help, please contact our helpdesk, and ask for our assistance.
+Transferring Data
+There are two main protocols for transferring data to and from the CHPC:
+Globus
+Globus is a set of tools built on the GridFTP protocol. Instructions for transferring data with Globus are provided here.
+scp
+To transfer data onto or off the CHPC cluster use scp, rsync or sftp commands and connect to or from the cluster's scp node: scp.chpc.ac.za. Please do not transfer files directly to lengau.chpc.ac.za. It is a shared login node, and in order not to overload it, file transfer should be done to the dedicated scp server. For the same reason, when copying large files from one directory to another, it is preferable to not do this on the login node. You can log into one of several other servers to do the copying:
+	Use an Interactive PBS session on a compute node
+	ssh into scp
+	ssh into chpcviz1
+	ssh into chpclic1
+Examples
+From the command line on your Linux workstation:
+scp filetocopy.tar.gz yourusername@scp.chpc.ac.za:/mnt/lustre/users/yourusername/run15/
+transfers the file filetocopy.tar.gz from your disk on your computer to the Lustre file system on the CHPC cluster, under the run15/ subdirectory of your scratch directory /mnt/lustre/users/yourusername/ (where yourusername is replaced by your user name on the CHPC cluster).
+Downloading files from other servers
+You may need to download data from a server at another site. Do not do this on login2 ! Use scp.chpc.ac.za for this purpose. The easiest way of doing this is with the wget command:
+wget http://someserver.someuni.ac.za/pub/somefile.tgz
+Very large files may be transferred more quickly by using a multi-threaded downloader. The easiest of these is axel, see axel's GitHub page. The syntax is very simple:
+module load chpc/compmech/axel/2.17.6
+axel -n 4 -a http://someserver.someuni.ac.za/pub/somefile.tgz
+Read more on connecting to the CHPC...
+Shared Filesystems
+The new cluster has both NFS and the Lustre filesystems over Infiniband:
+Mount point	File System	Size	Quota	Backup	Access
+/home	NFS	80 TB	15 GB	NO [1]	Yes
+/mnt/lustre/users	Lustre	4 PB	none  	NO	Yes
+/apps	NFS	20 TB	none	Yes	No [2]
+/mnt/lustre/groups	Lustre	1 PB	1 TB [3]	NO	On request only
+  IMPORTANT NOTE: Files older than 90 days on /mnt/lustre/users will be automatically deleted without any warning or advance notice.
+Note [1] Unfortunately, at the moment the CHPC cannot guarantee any backup of the /home file system owing to hardware limitations.
+Note [2] Create a support ticket on Helpdesk if you would like to request us to install a new application, library or programming tool.
+Note [3] Access to /mnt/lustre/groups is by application only and a quota will be assigned to the programme, to be shared by all members of that group.
+It is essential that all files that your job script writes to be on Lustre, apart from scheduler errors you will lose performance because your home directory is on NFS which is not a parallel file system. It is also recommended that all files your jobs scripts reads, especially if large or read more than once, be on Lustre for the same reason.
+It is usually okay to keep binaries and libraries on home since they are read once and loaded into RAM when your executable launches. But you may notice improved performance if they are also on Lustre.
+Quotas
+The /home file system is managed by quotas and a strict limit of 15 GB (15 000 000 000 bytes) is applied to it. Please take care to not fill up your home directory. Use /mnt/lustre/users/yourusername to store large files. If your project requires access to large files over a long duration (more than 60 days) then please submit a request to helpdesk.
+You can see how much you are currently using with the du command:
+du --si -s $HOME
+IMPORTANT
+Make sure that all jobs use a working directory on the Lustre file system. Do not use your home directory for the working directory of your job. Use the directory allocated to you on the fast Lustre parallel file system:
+/mnt/lustre/users/USERNAME/
+where USERNAME is replace by your user name on the CHPC cluster.
+Always provide the full absolute path to your Lustre sub-directories. Do not rely on a symbolic link from your home directory.
+For these and other general best practices, see http://www.nas.nasa.gov/hecc/support/kb/lustre-best-practices_226.html
+Software
+Software resides in /apps which is an NFS file system mounted on all nodes:
+/apps/…	Description	Comment
+chpc/	Application codes supported by CHPC	(See below)
+compilers/	Compilers, other programming languages and development tools	
+libs/	Libraries	
+scripts/	Modules and other environment setup scripts	
+tools/	Miscellaneous software tools	
+user/	Code installed by a user research programme	Not supported by CHPC.
+Application Codes Scientific Domains
+/apps/chpc/…	Scientific Domain
+astro/	Astrophysics & Cosmology
+bio/	BioInformatics
+chem/	Chemistry
+compmech/	Mechanics
+cs/	Computer Science
+earth/	Earth
+image/	Image Processing
+material	Material Science
+phys/	Physics
+space/	Space
+Modules
+CHPC uses the GNU modules utility, which manipulates your environment, to provide access to the supported software in /apps/.
+Each of the major CHPC applications has a modulefile that sets, unsets, appends to, or prepends to environment variables such as $PATH, $LD_LIBRARY_PATH, $INCLUDE, $MANPATH for the specific application. Each modulefile also sets functions or aliases for use with the application. You need only to invoke a single command to configure the application/programming environment properly. The general format of this command is:
+module load <module_name>
+where <module_name> is the name of the module to load. It also supports Tab-key completion of command parameters.
+For a list of available modules:
+module avail
+The module command may be abbreviated and optionally be given a search term, eg.:
+module ava chpc/open
+Or, more flexibly, you can pipe stderr to grep, and search for a phrase, such as mpi:
+module avail 2>&1 | grep mpi
+To see a synopsis of a particular modulefile's operations:
+module help <module_name>
+To see currently loaded modules:
+module list
+To remove a module:
+module unload <module_name>
+To remove all modules:
+module purge
+To search for a module name or part of a name
+module-search  partname  
+After upgrades of software in /apps/, new modulefiles are created to reflect the changes made to the environment variables.
+Disclaimer: Codes in /apps/user/ are not supported by the CHPC and the TE for each research programme is required to create the appropriate module file or startup script.
+Compilers
+Supported compilers for C, C++ and Fortran are found in /apps/compilers along with interpreters for programming languages like Python.
+For MPI programmes, the appropriate library and mpi* compile scripts are also available.
+GNU Compiler Collection
+The default gcc compiler is 6.1.0:
+login2:~$ which gcc
+/cm/local/apps/gcc/6.1.0/bin/gcc
+login2:~$ gcc --version
+gcc (GCC) 6.1.0
+To use any other version of gcc you need to remove 6.1.0 from all paths with
+module purge
+before loading any other modules.
+The recommended combination of compiler and MPI library is GCC 5.1.0 and OpenMPI 1.8.8 and is accessed by loading both modules:
+module purge
+module add gcc/5.1.0
+module add chpc/openmpi/1.8.8/gcc-5.1.0
+Intel compiler and Intel MPI
+The module for the Intel compiler and Intel MPI is loaded with
+module load chpc/parallel_studio_xe/64/16.0.1/2016.1.150
+Scheduler
+The CHPC cluster uses PBSPro as its job scheduler. With the exception of interactive jobs, all jobs are submitted to a batch queuing system and only execute when the requested resources become available. All batch jobs are queued according to priority. A user's priority is not static: the CHPC uses the “Fairshare” facility of PBSPro to modify priority based on activity. This is done to ensure the finite resources of the CHPC cluster are shared fairly amongst all users.
+Queues
+workq is no longer to be used.
+The available queues with their nominal parameters are given in the following table. Please take note that these limits may be adjusted dynamically to manage the load on the system.
+Queue Name	Max. cores	Min. cores	Max. jobs	Max. time	Notes	Access
+	per job	in queue	running	hrs		
+serial	23	1	24	10	48	For single-node non-parallel jobs.	
+seriallong	12	1	24	10	144	For very long sub 1-node jobs.	
+smp	24	24	20	10	96	For single-node parallel jobs.	
+normal	240	25	20	10	48	The standard queue for parallel jobs	
+large	2400	264	10	5	96	For large parallel runs	Restricted
+xlarge	6000	2424	2	1	96	For extra-large parallel runs	Restricted
+express	2400	25	N/A	100 total nodes	96	For paid commercial use only	Restricted
+bigmem	280	28	4	1	48	For the large memory (1TiB RAM) nodes.	Restricted
+vis	12	1	1	1	3	Visualisation node	
+test	24	1	1	1	3	Normal nodes, for testing only	
+gpu_1	10	1		2	12	Up to 10 cpus, 1 GPU	
+gpu_2	20	1		2	12	Up to 20 cpus, 2 GPUs	
+gpu_3	36	1		2	12	Up to 36 cpus, 3 GPUs	
+gpu_4	40	1		2	12	Up to 40 cpus, 4 GPUs	
+gpu_long	20	1		1	24	Up to 20 cpus, 1 or 2 GPUs	Restricted
+Notes:
+	The queue limits may be adjusted dynamically in order to best manage the workload on the system. Use the command qstat -Qf to see what the current limits are.
+	A standard compute node has 24 cores and 128 GiB of memory (RAM).
+	Each large memory node has 56 cores and 1 TiB of memory.
+	Access to the large and bigmem queues is restricted and by special application only.
+	To obtain access to the large queue, you will need to submit satisfactory scaling results which demonstrate that the use of more than 10 nodes is justified. This includes demonstrating that you are competent enough to run large cases. This can only be done by proving that you can run smaller cases efficiently.
+	Additional restrictions:
+Queue Name	Max. total simultaneous running cores
+normal	240
+large	2400
+PBS Pro commands
+qstat	View queued jobs.
+qsub	Submit a job to the scheduler.
+qdel	Delete one of your jobs from queue.
+Job script parameters
+Parameters for any job submission are specified as #PBS comments in the job script file or as options to the qsub command. The essential options for the CHPC cluster include:
+ -l select=10:ncpus=24:mpiprocs=24:mem=120gb
+sets the size of the job in number of processors:
+select=N	number of nodes needed.
+ncpus=N	number of cores per node
+mpiprocs=N	number of MPI ranks (processes) per node
+mem=Ngb	amount of ram per node
+ -l walltime=4:00:00
+sets the total expected wall clock time in hours:minutes:seconds. Note the wall clock limits for each queue.
+The job size and wall clock time must be within the limits imposed on the queue used:
+ -q normal
+to specify the queue.
+Each job will draw from the allocation of cpu-hours granted to your Research Programme:
+ -P PRJT1234
+specifies the project identifier short name, which is needed to identify the Research Programme allocation you will draw from for this job. Ask your PI for the project short name and replace PRJT1234 with it.
+Restricted queues
+The large and bigmem queues are restricted to users who have need for them. If you are granted access to these queues then you should specify that you are a member of the largeq or bigmemq groups. For example:
+#PBS -q large
+#PBS -W group_list=largeq
+or
+#PBS -q bigmem
+#PBS -W group_list=bigmemq
+Example job scripts
+An OpenMP program using 24 threads on 24 cores
+Using the smp queue to run your own program called hello_mp.x which is in the path:
+#!/bin/bash
+#PBS -l select=1:ncpus=24:mpiprocs=24
+#PBS -P PRJT1234
+#PBS -q smp
+#PBS -l walltime=4:00:00
+#PBS -o /mnt/lustre/users/USERNAME/OMP_test/test1.out
+#PBS -e /mnt/lustre/users/USERNAME/OMP_test/test1.err
+#PBS -m abe
+#PBS -M youremail@ddress
+ulimit -s unlimited
+ 
+cd /mnt/lustre/users/USERNAME/OMP_test
+nproc=`cat $PBS_NODEFILE | wc -l`
+echo nproc is $nproc
+cat $PBS_NODEFILE
+ 
+# Run program
+hello_mp.x
+An MPI program using 240 cores
+Using the normal queue to run WRF:
+#!/bin/bash
+#PBS -l select=10:ncpus=24:mpiprocs=24:nodetype=haswell_reg
+#PBS -P PRJT1234
+#PBS -q normal
+#PBS -l walltime=4:00:00
+#PBS -o /mnt/lustre/users/USERNAME/WRF_Tests/WRFV3/run2km_100/wrf.out
+#PBS -e /mnt/lustre/users/USERNAME/WRF_Tests/WRFV3/run2km_100/wrf.err
+#PBS -m abe
+#PBS -M youremail@ddress
+ulimit -s unlimited
+. /apps/chpc/earth/WRF-3.7-impi/setWRF
+cd /mnt/lustre/users/USERNAME/WRF_Tests/WRFV3/run2km_100
+rm wrfout* rsl*
+nproc=`cat $PBS_NODEFILE | wc -l`
+echo nproc is $nproc
+cat $PBS_NODEFILE
+time mpirun -np $nproc wrf.exe > runWRF.out
+Assuming the above job script is saved as the text file example.job, the command to submit it to the PBSPro scheduler is:
+qsub example.job
+No additional parameters are needed for the qsub command since all the PBS parameters are specified within the job script file.
+IMPORTANT
+Note that in the above job script example the working directory is on the Lustre file system. Do not use your home directory for the working directory of your job. Use the directory allocated to you on the fast Lustre parallel file system:
+/mnt/lustre/users/USERNAME/
+where USERNAME is replace by your user name on the CHPC cluster.
+Always provide the full absolute path to your Lustre sub-directories. Do not rely on a symbolic link from your home directory.
+Hybrid MPI/OpenMP
+For example, to request an MPI job on one node with 12 cores per MPI rank, so that each MPI process can launch 12 OpenMP threads, change the -l parameters:
+#PBS -l select=1:ncpus=24:mpiprocs=2:nodetype=haswell_reg
+There are two MPI ranks, so mpirun -n 2 … .
+Example interactive job request
+To request an interactive session on a single core, the full command for qsub is:
+qsub -I -P PROJ0101 -q serial -l select=1:ncpus=1:mpiprocs=1:nodetype=haswell_reg
+To request an interactive session on a full node, the full command for qsub is:
+qsub -I -P PROJ0101 -q smp -l select=1:ncpus=24:mpiprocs=24:nodetype=haswell_reg
+Note:
+	Please think carefully about whether you really need a full node, or if 1, 2 or 3 cores might be sufficient
+	-I selects an interactive job
+	You can add -X to get X-forwarding
+	you still must specify your project
+	the queue must be smp, serial or test
+	interactive jobs only get one node: select=1
+	for the smp queue you can request several cores: ncpus=24
+	you can run MPI code: indicate how many ranks you want with mpiprocs=
+If you find your interactive session timing out too soon then add -l walltime=4:0:0 to the above command line to request the maximum 4 hours.
+
