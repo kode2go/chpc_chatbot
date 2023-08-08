@@ -5,6 +5,7 @@ import os
 import openai
 
 # Set your API key
+os.environ["OPENAI_API_KEY"] = st.secrets["api_secret"]
 openai.api_key = st.secrets["api_secret"]
 
 def construct_index(directory_path):
